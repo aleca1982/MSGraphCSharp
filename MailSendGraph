@@ -1,0 +1,75 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
+using Microsoft.Graph;
+using Microsoft.Identity.Client;
+
+namespace MailSendeGraph
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            var clientId = "ClientID";
+            var clientSecret = "ClientSecret";
+            var scopes = new[] { "https://graph.microsoft.com/.default" };
+
+            var confidentialClientApplication = ConfidentialClientApplicationBuilder
+                .Create(clientId)
+                .WithClientSecret(clientSecret)
+                .WithAuthority(new Uri("https://login.microsoftonline.com/TenantID"))
+                .Build();
+
+            var authResult = await confidentialClientApplication
+                .AcquireTokenForClient(scopes)
+                .ExecuteAsync();
+
+            var graphServiceClient = new GraphServiceClient(
+                new DelegateAuthenticationProvider(requestMessage =>
+                {
+                    requestMessage.Headers.Authorization =
+                        new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
+
+                    return Task.CompletedTask;
+                }));
+
+            var message = new Message
+            {
+                Subject = "9/9/2018: concert",
+                Body = new ItemBody
+                {
+                    ContentType = BodyType.Html,
+                    Content = "The group represents Nevada."
+                },
+                ToRecipients = new List<Recipient>()
+            {
+                new Recipient
+                {
+                    EmailAddress = new EmailAddress
+                    {
+                        Address = "user@contoso.com"
+                    }
+                }
+            },
+                InternetMessageHeaders = new List<InternetMessageHeader>()
+            {
+                new InternetMessageHeader
+                {
+                    Name = "x-custom-header-group-name",
+                    Value = "Nevada"
+                },
+                new InternetMessageHeader
+                {
+                    Name = "x-custom-header-group-id",
+                    Value = "NV001"
+                }
+            }
+                    };
+
+            await graphServiceClient.Users["SenderID"].SendMail(message, null).Request().PostAsync();
+            
+            Console.WriteLine("Email sent successfully!");
+        }
+    }
+}
