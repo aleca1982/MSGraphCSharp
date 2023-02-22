@@ -68,8 +68,7 @@ namespace MailSendeGraph
                     };
 
             await graphServiceClient.Users["SenderID"].SendMail(message, null).Request().PostAsync();
-            
-            Console.WriteLine("Email sent successfully!");
+                        
         }
     }
 }
